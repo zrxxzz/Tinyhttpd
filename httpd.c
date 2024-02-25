@@ -66,6 +66,7 @@ void accept_request(void *arg)
                        * program */
     char *query_string = NULL;
 
+    // 读取请求行
     numchars = get_line(client, buf, sizeof(buf));
     i = 0; j = 0;
     while (!ISspace(buf[i]) && (i < sizeof(method) - 1))
@@ -86,18 +87,21 @@ void accept_request(void *arg)
         cgi = 1;
 
     i = 0;
+    // 如果有多余的空格就跳过
     while (ISspace(buf[j]) && (j < numchars))
         j++;
+    // 读取url
     while (!ISspace(buf[j]) && (i < sizeof(url) - 1) && (j < numchars))
     {
         url[i] = buf[j];
         i++; j++;
     }
     url[i] = '\0';
-
+    // 根据请求方法不同，处理方式不同
     if (strcasecmp(method, "GET") == 0)
     {
         query_string = url;
+        // 下标移动，判断是否有查询字符串
         while ((*query_string != '?') && (*query_string != '\0'))
             query_string++;
         if (*query_string == '?')
@@ -107,7 +111,7 @@ void accept_request(void *arg)
             query_string++;
         }
     }
-
+    // 构造资源路径
     sprintf(path, "htdocs%s", url);
     if (path[strlen(path) - 1] == '/')
         strcat(path, "index.html");
@@ -243,7 +247,7 @@ void execute_cgi(int client, const char *path,
     {
     }
 
-
+    // 创建管道
     if (pipe(cgi_output) < 0) {
         cannot_execute(client);
         return;
@@ -252,7 +256,7 @@ void execute_cgi(int client, const char *path,
         cannot_execute(client);
         return;
     }
-
+    // 创建子进程
     if ( (pid = fork()) < 0 ) {
         cannot_execute(client);
         return;
@@ -265,8 +269,8 @@ void execute_cgi(int client, const char *path,
         char query_env[255];
         char length_env[255];
 
-        dup2(cgi_output[1], STDOUT);
-        dup2(cgi_input[0], STDIN);
+        dup2(cgi_output[1], STDOUT);//写入
+        dup2(cgi_input[0], STDIN);//读取
         close(cgi_output[0]);
         close(cgi_input[1]);
         sprintf(meth_env, "REQUEST_METHOD=%s", method);
